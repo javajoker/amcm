@@ -1,0 +1,728 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>体素化可行性评估</title>
+<meta name="description" content="AI 自动生成 Minecraft 体素对象项目的技术可行性判断、分模态方案与关键文献索引。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+/* ============ tokens: light (bare :root = complete palette) ============ */
+:root{
+  --ground:#F6F4F0;
+  --surface:#FFFFFF;
+  --surface-2:#EFEDE7;
+  --ink:#1B201E;
+  --ink-2:#3C4441;
+  --muted:#646D69;
+  --faint:#8C948F;
+  --rule:#DCD8D0;
+  --rule-strong:#C3BFB5;
+  --accent:#2C7A67;
+  --accent-ink:#1D5245;
+  --accent-wash:#E4EFEA;
+  --warn:#A85520;
+  --warn-wash:#F5E8DC;
+  --crit:#9E3227;
+  --crit-wash:#F6E3E0;
+  --ok:#4E7A2C;
+  --ok-wash:#E8F0DF;
+  --shadow:0 1px 0 rgba(27,32,30,.05);
+
+  --f-display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --f-prose:"Source Serif 4",Georgia,"Times New Roman",serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+/* ============ tokens: dark via system (un-stamped default) ============ */
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#131715;
+    --surface:#1A1F1D;
+    --surface-2:#222825;
+    --ink:#E9E7E1;
+    --ink-2:#C6C9C4;
+    --muted:#98A19C;
+    --faint:#727B76;
+    --rule:#2B322E;
+    --rule-strong:#3C443F;
+    --accent:#5FB89E;
+    --accent-ink:#8FD3BE;
+    --accent-wash:#1B2B26;
+    --warn:#D98A4E;
+    --warn-wash:#2C2119;
+    --crit:#D9695C;
+    --crit-wash:#2E1D1A;
+    --ok:#8FBF63;
+    --ok-wash:#212B18;
+    --shadow:0 1px 0 rgba(0,0,0,.3);
+  }
+}
+/* ============ tokens: dark via explicit stamp ============ */
+:root[data-theme="dark"]{
+  --ground:#131715;
+  --surface:#1A1F1D;
+  --surface-2:#222825;
+  --ink:#E9E7E1;
+  --ink-2:#C6C9C4;
+  --muted:#98A19C;
+  --faint:#727B76;
+  --rule:#2B322E;
+  --rule-strong:#3C443F;
+  --accent:#5FB89E;
+  --accent-ink:#8FD3BE;
+  --accent-wash:#1B2B26;
+  --warn:#D98A4E;
+  --warn-wash:#2C2119;
+  --crit:#D9695C;
+  --crit-wash:#2E1D1A;
+  --ok:#8FBF63;
+  --ok-wash:#212B18;
+  --shadow:0 1px 0 rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+
+/* no rounded corners anywhere — voxels don't have them */
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--ink);
+  font-family:var(--f-display);
+  font-size:16px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+
+.wrap{
+  display:grid;
+  grid-template-columns:220px minmax(0,1fr);
+  gap:0;
+  max-width:1180px;
+  margin:0 auto;
+}
+
+/* ---------------- nav rail ---------------- */
+nav{
+  position:sticky; top:0; align-self:start;
+  height:100vh; overflow-y:auto;
+  padding:38px 22px 40px 24px;
+  border-right:1px solid var(--rule);
+  display:flex; flex-direction:column; gap:22px;
+}
+.brand{display:flex;flex-direction:column;gap:7px}
+.brand .mark{display:flex;gap:2px}
+.brand .mark i{width:9px;height:9px;display:block}
+.brand b{font-size:13px;font-weight:700;letter-spacing:.02em;line-height:1.3}
+.brand span{font-family:var(--f-mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint)}
+nav ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:1px;counter-reset:s}
+nav a{
+  display:flex;gap:9px;align-items:baseline;
+  font-size:12.5px;line-height:1.35;color:var(--muted);text-decoration:none;
+  padding:5px 8px 5px 0;border-left:2px solid transparent;padding-left:9px;
+  transition:color .12s,border-color .12s;
+}
+nav a .n{font-family:var(--f-mono);font-size:10px;color:var(--faint);min-width:14px;font-variant-numeric:tabular-nums}
+nav a:hover{color:var(--ink)}
+nav a.on{color:var(--accent-ink);border-left-color:var(--accent);font-weight:600}
+nav a.on .n{color:var(--accent)}
+nav a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.themebtn{
+  margin-top:auto;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+  background:transparent;border:1px solid var(--rule-strong);color:var(--muted);
+  padding:7px 10px;cursor:pointer;text-align:left;
+}
+.themebtn:hover{color:var(--ink);border-color:var(--accent)}
+.themebtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---------------- main ---------------- */
+main{padding:38px 40px 120px;min-width:0}
+section{padding-block:34px;border-top:1px solid var(--rule)}
+section:first-of-type{border-top:none;padding-top:0}
+
+.eyebrow{
+  font-family:var(--f-mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--faint);margin:0 0 10px;display:flex;align-items:center;gap:8px;
+}
+.eyebrow::after{content:"";flex:1;height:1px;background:var(--rule)}
+
+h1{
+  font-size:clamp(30px,4.4vw,46px);line-height:1.06;font-weight:700;letter-spacing:-.022em;
+  margin:0 0 14px;text-wrap:balance;
+}
+h2{font-size:23px;font-weight:700;letter-spacing:-.014em;line-height:1.2;margin:0 0 8px;text-wrap:balance}
+h3{font-size:15px;font-weight:600;letter-spacing:-.005em;margin:26px 0 8px}
+p{margin:0 0 13px;max-width:66ch}
+.prose{font-family:var(--f-prose);font-size:16.5px;line-height:1.66;color:var(--ink-2)}
+.lede{font-family:var(--f-prose);font-size:18.5px;line-height:1.55;color:var(--ink-2);max-width:62ch;margin:0 0 20px}
+.sub{color:var(--muted);font-size:14px;max-width:66ch;margin:0 0 20px}
+strong{font-weight:600;color:var(--ink)}
+a{color:var(--accent-ink);text-underline-offset:2px;text-decoration-thickness:1px}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+code{font-family:var(--f-mono);font-size:.87em;background:var(--surface-2);padding:1px 5px;color:var(--ink)}
+
+/* header block */
+header.top{padding-bottom:30px}
+.metaline{
+  display:flex;flex-wrap:wrap;gap:8px;align-items:center;
+  font-family:var(--f-mono);font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);
+  margin-bottom:18px;
+}
+.chip{
+  display:inline-flex;align-items:center;gap:5px;padding:3px 8px;
+  border:1px solid var(--rule-strong);color:var(--muted);
+  font-family:var(--f-mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;
+}
+.chip.hot{border-color:var(--accent);color:var(--accent-ink);background:var(--accent-wash)}
+
+/* verdict cards */
+.verdicts{display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule);margin-top:6px}
+@media(min-width:760px){.verdicts{grid-template-columns:repeat(3,1fr)}}
+.v{background:var(--surface);padding:20px 20px 22px;display:flex;flex-direction:column;gap:9px}
+.v .k{font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);}
+.v h4{margin:0;font-size:15.5px;font-weight:700;line-height:1.28;letter-spacing:-.01em}
+.v p{margin:0;font-family:var(--f-prose);font-size:14.5px;line-height:1.55;color:var(--muted);max-width:none}
+
+/* palette / gamut figure */
+.gamut{display:grid;gap:22px;margin-top:20px}
+@media(min-width:820px){.gamut{grid-template-columns:1fr 1fr}}
+.swgroup{border:1px solid var(--rule);background:var(--surface);padding:16px}
+.swgroup h4{margin:0 0 3px;font-size:13.5px;font-weight:700}
+.swgroup .cap{font-size:12.5px;color:var(--muted);margin:0 0 13px;max-width:none;font-family:var(--f-prose)}
+.sw{display:grid;grid-template-columns:repeat(auto-fill,minmax(34px,1fr));gap:3px}
+.sw i{display:block;aspect-ratio:1;position:relative}
+.sw i::after{
+  content:attr(data-n);position:absolute;inset:auto 0 0 0;
+  font-family:var(--f-mono);font-size:8px;color:#fff;background:rgba(0,0,0,.55);
+  padding:1px 2px;opacity:0;transition:opacity .12s;text-align:center;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.sw i:hover::after{opacity:1}
+.note{
+  border-left:2px solid var(--accent);background:var(--accent-wash);
+  padding:13px 16px;margin:18px 0 0;font-family:var(--f-prose);font-size:14.5px;line-height:1.6;color:var(--ink-2);
+}
+.note b{font-family:var(--f-display);font-weight:600}
+
+/* layer stack */
+.layers{display:flex;flex-direction:column;gap:1px;background:var(--rule);border:1px solid var(--rule);margin-top:18px}
+.layer{background:var(--surface);display:grid;grid-template-columns:64px minmax(0,1fr) 92px;align-items:center;gap:16px;padding:16px 18px}
+.layer .id{font-family:var(--f-mono);font-size:19px;font-weight:600;color:var(--faint);letter-spacing:-.02em}
+.layer.core{background:var(--accent-wash)}
+.layer.core .id{color:var(--accent)}
+.layer h4{margin:0 0 2px;font-size:14.5px;font-weight:600}
+.layer p{margin:0;font-size:13px;color:var(--muted);max-width:none}
+.bar{display:flex;flex-direction:column;gap:4px;align-items:flex-end}
+.bar .pct{font-family:var(--f-mono);font-size:12px;font-variant-numeric:tabular-nums;color:var(--ink-2)}
+.bar .track{width:82px;height:5px;background:var(--surface-2)}
+.bar .fill{height:100%;background:var(--rule-strong)}
+.layer.core .bar .fill{background:var(--accent)}
+
+/* energy formula */
+.formula{
+  font-family:var(--f-mono);font-size:12.5px;line-height:1.95;
+  background:var(--surface);border:1px solid var(--rule);padding:18px 20px;margin:16px 0 0;
+  overflow-x:auto;white-space:pre;color:var(--ink-2);
+}
+.formula .op{color:var(--accent)}
+.formula .cm{color:var(--faint)}
+
+/* tables */
+.tw{overflow-x:auto;border:1px solid var(--rule);background:var(--surface);margin-top:16px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:560px}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--rule);vertical-align:top}
+thead th{
+  font-family:var(--f-mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--faint);font-weight:500;background:var(--surface-2);white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--surface-2)}
+td .name{font-weight:600}
+td small{display:block;color:var(--muted);font-size:12.3px;line-height:1.45;margin-top:2px}
+.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* severity pills */
+.pill{display:inline-block;padding:2px 7px;font-family:var(--f-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.p-low{background:var(--ok-wash);color:var(--ok)}
+.p-mid{background:var(--warn-wash);color:var(--warn)}
+.p-high{background:var(--crit-wash);color:var(--crit)}
+.p-mvp{background:var(--accent-wash);color:var(--accent-ink);font-weight:600}
+.stars{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.5px;color:var(--accent);white-space:nowrap}
+.stars b{color:var(--faint);font-weight:400}
+
+/* problems list */
+.probs{display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule);margin-top:18px}
+.prob{background:var(--surface);padding:17px 19px;display:grid;grid-template-columns:26px minmax(0,1fr);gap:14px}
+.prob .i{font-family:var(--f-mono);font-size:11px;color:var(--accent);padding-top:3px;font-weight:600}
+.prob h4{margin:0 0 5px;font-size:14.5px;font-weight:600;display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.prob p{margin:0;font-family:var(--f-prose);font-size:14.5px;line-height:1.58;color:var(--muted);max-width:64ch}
+
+/* phases */
+.phases{display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule);margin-top:18px}
+@media(min-width:900px){.phases{grid-template-columns:repeat(4,1fr)}}
+.ph{background:var(--surface);padding:17px 17px 19px;display:flex;flex-direction:column;gap:8px}
+.ph .hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.ph .p{font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+.ph .w{font-family:var(--f-mono);font-size:10.5px;color:var(--faint);font-variant-numeric:tabular-nums}
+.ph h4{margin:0;font-size:14px;font-weight:600;line-height:1.3}
+.ph ul{margin:2px 0 0;padding-left:15px;display:flex;flex-direction:column;gap:5px}
+.ph li{font-size:12.8px;line-height:1.45;color:var(--muted)}
+
+/* start-here */
+.start{display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule);margin-top:18px}
+@media(min-width:800px){.start{grid-template-columns:repeat(3,1fr)}}
+.st{background:var(--surface);padding:19px;display:flex;flex-direction:column;gap:8px}
+.st .tag{font-family:var(--f-mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--accent)}
+.st h4{margin:0;font-size:15px;font-weight:700;line-height:1.28}
+.st p{margin:0;font-family:var(--f-prose);font-size:14px;line-height:1.55;color:var(--muted);max-width:none}
+
+/* refs */
+.refs{display:flex;flex-direction:column;gap:1px;background:var(--rule);border:1px solid var(--rule);margin-top:18px}
+.ref{background:var(--surface);padding:14px 18px;display:grid;grid-template-columns:22px minmax(0,1fr);gap:14px;align-items:start}
+.ref .n{font-family:var(--f-mono);font-size:11px;color:var(--faint);padding-top:2px;font-variant-numeric:tabular-nums}
+.ref .t{font-size:14px;font-weight:600;line-height:1.35;margin:0 0 3px}
+.ref .why{margin:0;font-family:var(--f-prose);font-size:13.5px;line-height:1.5;color:var(--muted);max-width:64ch}
+
+footer{padding:26px 40px 60px;border-top:1px solid var(--rule);color:var(--faint);font-family:var(--f-mono);font-size:11px;letter-spacing:.04em;grid-column:1/-1}
+
+@media(max-width:860px){
+  .wrap{grid-template-columns:1fr}
+  nav{position:static;height:auto;border-right:none;border-bottom:1px solid var(--rule);padding:22px 22px 18px}
+  nav ol{flex-direction:row;flex-wrap:wrap;gap:2px 4px}
+  nav a{border-left:none;border-bottom:2px solid transparent;padding:4px 7px}
+  nav a.on{border-left-color:transparent;border-bottom-color:var(--accent)}
+  .themebtn{margin-top:12px;align-self:flex-start}
+  main{padding:26px 20px 90px}
+  footer{padding:24px 20px 50px}
+  .layer{grid-template-columns:44px minmax(0,1fr);row-gap:10px}
+  .layer .bar{grid-column:1/-1;align-items:flex-start}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+html{scroll-behavior:smooth}
+section{scroll-margin-top:20px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<nav>
+  <div class="brand">
+    <div class="mark">
+      <i style="background:#7A7A7A"></i><i style="background:#985E44"></i><i style="background:#2C7A67"></i><i style="background:#79C05A"></i>
+    </div>
+    <b>AI → Minecraft<br>体素对象生成</b>
+    <span>立项技术评估 · v0.1</span>
+  </div>
+  <ol>
+    <li><a href="#verdict" class="on"><span class="n">01</span>结论</a></li>
+    <li><a href="#gamut"><span class="n">02</span>调色板上界</a></li>
+    <li><a href="#arch"><span class="n">03</span>三层架构</a></li>
+    <li><a href="#core"><span class="n">04</span>L3 核心算法</a></li>
+    <li><a href="#hard"><span class="n">05</span>五个本质困难</a></li>
+    <li><a href="#modes"><span class="n">06</span>输入模态</a></li>
+    <li><a href="#road"><span class="n">07</span>路线图</a></li>
+    <li><a href="#risk"><span class="n">08</span>风险</a></li>
+    <li><a href="#refs"><span class="n">09</span>关键文献</a></li>
+    <li><a href="#start"><span class="n">10</span>从这里开始</a></li>
+  </ol>
+  <button class="themebtn" id="tt">切换主题</button>
+</nav>
+
+<main>
+
+<header class="top">
+  <div class="metaline">
+    <span class="chip hot">立项评估</span>
+    <span class="chip">2026-08</span>
+    <span>技术可行性 · 方案汇总 · 文献索引</span>
+  </div>
+  <h1>从点云、照片与语言<br>生成 Minecraft 体素对象</h1>
+  <p class="lede">输出包含体素空间位置、颜色与材质类型的完整 MC 模型。本文给出可行性判断、分模态技术方案，以及每条参考文献在管线中的具体落点。</p>
+  <p class="sub"><strong>总体判断：整体可行，但可行性在不同输入模态上差异极大，必须分阶段推进。</strong>下面十节是完整论证。</p>
+</header>
+
+<section id="verdict">
+  <p class="eyebrow">01 — 结论</p>
+  <h2>三个决定项目形态的判断</h2>
+  <p class="prose">这三条不是并列的观察，而是有依赖关系的推论链：风险位置决定投入分配，理论成熟度决定它是工程还是科研，物理上界决定能对用户承诺什么。</p>
+  <div class="verdicts">
+    <div class="v">
+      <span class="k">风险位置</span>
+      <h4>难点不在重建，在「MC 化」</h4>
+      <p>VGGT、3DGS、TRELLIS.2、SAM2 已把几何与外观获取推到调库可用。真正没有现成方案、必须自研的，是把「占用 + 反照率 + 材质语义 + 法向」映射到「方块 ID + 方块状态」的离散优化层。</p>
+    </div>
+    <div class="v">
+      <span class="k">理论支撑</span>
+      <h4>是工程问题，不是科研赌注</h4>
+      <p>该层可严格形式化为带成对平滑项的 MRF-MAP 推断，用 α-expansion 求解，度量条件下有 2 倍近似比保证。误差可界、可度量、可回归测试。</p>
+    </div>
+    <div class="v">
+      <span class="k">物理上界</span>
+      <h4>调色板色域稀疏且有偏</h4>
+      <p>高饱和的青、品红、纯红存在不可消除的色差。应对是抖动 + 色域映射，并把「风格化再现」而非「色彩复刻」写进产品预期。第 1 周必须量化它。</p>
+    </div>
+  </div>
+</section>
+
+<section id="gamut">
+  <p class="eyebrow">02 — 物理上界</p>
+  <h2>Minecraft 的颜色，你只有这些</h2>
+  <p class="prose">这是项目唯一无法通过工程手段消除的约束，所以放在最前面。下面是可用作颜色源的方块的真实色值，按来源分成两组 —— 分组本身就是结论。</p>
+
+  <div class="gamut">
+    <div class="swgroup">
+      <h4>自然与建材方块 · 有纹理</h4>
+      <p class="cap">石、木、土、砂、矿物。纹理丰富，但集中在低饱和的灰、棕、绿。这是 MC 色域的主体。</p>
+      <div class="sw">
+        <i style="background:#79C05A" data-n="草方块"></i><i style="background:#5A7431" data-n="苔藓"></i>
+        <i style="background:#6F8F3E" data-n="树叶"></i><i style="background:#B8945F" data-n="橡木板"></i>
+        <i style="background:#6B4F32" data-n="云杉木"></i><i style="background:#C8AD7F" data-n="白桦木"></i>
+        <i style="background:#835432" data-n="深色橡木"></i><i style="background:#7E7E7E" data-n="石头"></i>
+        <i style="background:#7A7A7A" data-n="圆石"></i><i style="background:#8E8681" data-n="安山岩"></i>
+        <i style="background:#9C6E63" data-n="花岗岩"></i><i style="background:#B7B0A8" data-n="闪长岩"></i>
+        <i style="background:#4F4F52" data-n="深板岩"></i><i style="background:#DBD3A0" data-n="沙子"></i>
+        <i style="background:#D9D2A4" data-n="砂岩"></i><i style="background:#A85434" data-n="红沙"></i>
+        <i style="background:#836539" data-n="泥土"></i><i style="background:#8A8A8A" data-n="砾石"></i>
+        <i style="background:#985E4A" data-n="红砖"></i><i style="background:#985E44" data-n="陶瓦"></i>
+        <i style="background:#2C1418" data-n="下界砖"></i><i style="background:#6F3634" data-n="下界岩"></i>
+        <i style="background:#15121E" data-n="黑曜石"></i><i style="background:#ECE9E2" data-n="石英块"></i>
+        <i style="background:#F0FAFA" data-n="雪"></i><i style="background:#A5C8EF" data-n="冰"></i>
+        <i style="background:#3F76E4" data-n="水"></i><i style="background:#63AE9C" data-n="海晶石"></i>
+        <i style="background:#D8D8D8" data-n="铁块"></i><i style="background:#F9EC4E" data-n="金块"></i>
+        <i style="background:#C16D51" data-n="铜块"></i><i style="background:#52A18F" data-n="氧化铜"></i>
+        <i style="background:#66E5DE" data-n="钻石块"></i><i style="background:#35C556" data-n="绿宝石块"></i>
+        <i style="background:#971607" data-n="红石块"></i><i style="background:#1F44A5" data-n="青金石块"></i>
+      </div>
+    </div>
+    <div class="swgroup">
+      <h4>染色方块 · 羊毛 / 混凝土 / 陶瓦</h4>
+      <p class="cap">16 色 × 三个系列。这里才有高饱和度 —— 但它们几乎<strong>没有纹理</strong>，是平色块。</p>
+      <div class="sw">
+        <i style="background:#E9ECEC" data-n="白色"></i><i style="background:#F9801D" data-n="橙色"></i>
+        <i style="background:#C74EBD" data-n="品红"></i><i style="background:#3AB3DA" data-n="淡蓝"></i>
+        <i style="background:#FED83D" data-n="黄色"></i><i style="background:#80C71F" data-n="黄绿"></i>
+        <i style="background:#F38BAA" data-n="粉红"></i><i style="background:#474F52" data-n="灰色"></i>
+        <i style="background:#9D9D97" data-n="淡灰"></i><i style="background:#169C9C" data-n="青色"></i>
+        <i style="background:#8932B8" data-n="紫色"></i><i style="background:#3C44AA" data-n="蓝色"></i>
+        <i style="background:#835432" data-n="棕色"></i><i style="background:#5E7C16" data-n="绿色"></i>
+        <i style="background:#B02E26" data-n="红色"></i><i style="background:#1D1C21" data-n="黑色"></i>
+        <i style="background:#CFD5D6" data-n="白混凝土"></i><i style="background:#E06100" data-n="橙混凝土"></i>
+        <i style="background:#A9309F" data-n="品红混凝土"></i><i style="background:#2489C7" data-n="淡蓝混凝土"></i>
+        <i style="background:#F1AF15" data-n="黄混凝土"></i><i style="background:#5EA918" data-n="黄绿混凝土"></i>
+        <i style="background:#D5658F" data-n="粉混凝土"></i><i style="background:#36393D" data-n="灰混凝土"></i>
+        <i style="background:#7D7D73" data-n="淡灰混凝土"></i><i style="background:#157788" data-n="青混凝土"></i>
+        <i style="background:#64209C" data-n="紫混凝土"></i><i style="background:#2C2E8F" data-n="蓝混凝土"></i>
+        <i style="background:#603C20" data-n="棕混凝土"></i><i style="background:#495B24" data-n="绿混凝土"></i>
+        <i style="background:#8E2121" data-n="红混凝土"></i><i style="background:#080A0F" data-n="黑混凝土"></i>
+        <i style="background:#D1B1A1" data-n="白陶瓦"></i><i style="background:#A05325" data-n="橙陶瓦"></i>
+        <i style="background:#95576C" data-n="品红陶瓦"></i><i style="background:#706C8A" data-n="淡蓝陶瓦"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>这张图的真正结论不是「颜色少」，而是「饱和度与纹理不可兼得」。</b>
+    高饱和只来自染色系列，而染色系列几乎是平色；有纹理的自然方块几乎都是低饱和。所以调色板匹配不能只比平均色 —— 必须同时匹配<strong>纹理频率能量</strong>，否则会把大片平墙配成花岗岩，或把细节丰富的表面配成一片死板的混凝土。
+  </div>
+  <div class="note" style="border-left-color:var(--warn);background:var(--warn-wash)">
+    <b>实验 E1 · 第 1 周 · 最高优先级。</b>
+    从游戏资源提取全部「方块 × 面」的 Lab 平均色与方差，计算调色板在 sRGB 内的最大最近邻距离场，输出一张「哪些颜色 MC 表达不了」的热力图。预期低饱和区 ΔE₀₀ &lt; 5，高饱和区 ΔE₀₀ &gt; 20。<strong>这个数字会直接改写产品文案与验收标准</strong>，所以必须先于一切模型工作完成。
+  </div>
+</section>
+
+<section id="arch">
+  <p class="eyebrow">03 — 架构</p>
+  <h2>三层分解，与随之而来的投入分配</h2>
+  <p class="prose">全部输入模态共享同一后端，差异只在于前端如何得到「几何 + 外观 + 语义」三元组。这个分层直接决定了人力该往哪放 —— 任何把主要精力花在「选哪个 3D 生成模型」上的规划都是错配的。</p>
+
+  <div class="layers">
+    <div class="layer">
+      <span class="id">L1</span>
+      <div><h4>几何层 — 复用为主</h4><p>任意输入 → 占用场 + 表面法向 + 亚体素残差。VGGT / COLMAP / 3DGS / TRELLIS.2 / 广义缠绕数体素化。TRL 8–9，基本是集成工作。</p></div>
+      <div class="bar"><span class="pct">15%</span><span class="track"><span class="fill" style="width:15%"></span></span></div>
+    </div>
+    <div class="layer">
+      <span class="id">L2</span>
+      <div><h4>外观层 — 复用加调优</h4><p>去光照取反照率（RGB↔X），材质语义分割（SAM2 + DMS/MatSeg + 开放词表）。TRL 6–7，材质分类需要微调，去光照是质量分水岭。</p></div>
+      <div class="bar"><span class="pct">30%</span><span class="track"><span class="fill" style="width:30%"></span></span></div>
+    </div>
+    <div class="layer core">
+      <span class="id">L3</span>
+      <div><h4>Blockification — 必须自研，全部差异化价值所在</h4><p>方块调色板构建 → 一元代价 → MRF 联合标注 → 亚体素几何拟合 → 物理合法性修复 → 格式导出。无现成方案。</p></div>
+      <div class="bar"><span class="pct">55%</span><span class="track"><span class="fill" style="width:55%"></span></span></div>
+    </div>
+  </div>
+
+  <h3>中间表示是架构的枢纽</h3>
+  <p class="prose">它必须先于任何模态管线定义清楚，否则每接一个新输入都会污染核心层。三个非常规的设计决定：</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th>字段</th><th>形状</th><th>为什么这样设计</th></tr></thead>
+    <tbody>
+      <tr><td class="name">albedo</td><td class="num">(Nv, 6, 3)</td><td><strong>逐面存储，不是逐体素。</strong>MC 方块各向异性 —— 草方块顶绿侧土。逐体素平均会丢掉这个关键区分，也丢掉「不同面被不同视角看到、置信度不同」的信息。</td></tr>
+      <tr><td class="name">residual</td><td class="num">(Nv,)</td><td><strong>体素化通常丢弃这个量。</strong>但真实表面到体素中心的有符号偏移，正是楼梯/台阶等亚体素原语的驱动信号。丢了就再也拿不回来。</td></tr>
+      <tr><td class="name">albedo_conf</td><td class="num">(Nv, 6)</td><td><strong>显式记录未观测区域。</strong>物体背面、内部、遮挡区没有观测，必须走补全或纯语义推断，不能当成黑色处理。</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="core">
+  <p class="eyebrow">04 — 核心算法</p>
+  <h2>L3 求解什么</h2>
+  <p class="prose">把一个模糊的「AI 生成」需求，转化为一个有五十年文献支撑的组合优化问题 —— 这是本项目最重要的可行性依据。求方块分配 <code>b: V → B × S</code>，最小化：</p>
+
+<div class="formula">E(b) = <span class="op">Σ</span><sub>v</sub> [ λ_c · D_color( a_v , c(b_v, n_v) )        <span class="cm">← 颜色项：逐面 ΔE₀₀，只惩罚看得见的面</span>
+       + λ_m · ( −log p_v( mat(b_v) ) )        <span class="cm">← 材质语义项：分割模型给的后验</span>
+       + λ_t · | freq(a_v) − freq(b_v) |        <span class="cm">← 纹理频率项：便宜且效果明显</span>
+       + λ_g · D_geom( r_v , geom(b_v) ) ]      <span class="cm">← 亚体素几何项：楼梯/台阶拟合</span>
+     + <span class="op">Σ</span><sub>(u,v)∈N</sub> λ_s · ψ( b_u , b_v )         <span class="cm">← 成对项：方块共现先验，抗椒盐噪声</span>
+     + λ_p · Φ_physics(b)  +  λ_b · Ψ_budget(b) <span class="cm">← 建议做后处理 pass，不入能量</span></div>
+
+  <h3>三条让它真正可解的工程判断</h3>
+  <div class="probs">
+    <div class="prob"><span class="i">A</span><div><h4>一元项不是瓶颈</h4><p>|V|≈4×10⁵、|B|≈400 时约 1.6×10⁸ 次查表，GPU 上几百毫秒。真正需要控制规模的是成对项 —— 只在<strong>表面体素</strong>上做 MRF，内部直接填最便宜的结构方块，规模降一个量级；再按 32³ 分块、块间重叠 4 体素做边界一致化。N=256 预期 30–120 秒。</p></div></div>
+    <div class="prob"><span class="i">B</span><div><h4>成对项 ψ 从真实建筑语料统计得来</h4><p>方块共现频率来自 3D-Craft、GDMC 参赛作品、社区 schematic。<strong>这是把「人类建筑师的审美」注入系统的最低成本途径</strong> —— 比训练任何模型都便宜，效果立竿见影。v2 可换成在 MC 语料上训练的稀疏体素离散扩散先验：方块 ID 天然是离散 token，与掩码 token 建模的假设完美契合。</p></div></div>
+    <div class="prob"><span class="i">C</span><div><h4>3D 抖动必须用蓝噪声，不能用 Floyd–Steinberg</h4><p>2D map art 普遍用 FS 误差扩散，直接搬到 3D 是错的：FS 的误差沿扫描方向传播，产生蠕虫状<strong>方向性伪影</strong>。2D 观察方向固定时不显眼，但 3D 对象可任意旋转，某些角度会突然刺眼。改用 void-and-cluster 生成的 3D 蓝噪声阈值场：各向同性、可平铺、O(1) 查表、天然可复现。</p></div></div>
+  </div>
+
+  <div class="note">
+    <b>亚体素几何拟合是最值得投入的差异化点。</b>
+    楼梯（4 facing × 2 half × 5 shape）、台阶、地毯（1/16）、雪层（8 级 1/8 步进）能在<strong>不提高体素分辨率的前提下</strong>把有效几何精度提升约一档。屋顶、圆柱、球面的观感提升显著。这是 MC 特有的杠杆，也是与通用体素工具拉开差距的地方 —— 它最能体现「懂 Minecraft」。
+  </div>
+</section>
+
+<section id="hard">
+  <p class="eyebrow">05 — 本质困难</p>
+  <h2>五个绕不过去的问题</h2>
+  <div class="probs">
+    <div class="prob"><span class="i">01</span><div><h4>调色板色域缺口 <span class="pill p-high">不可消除</span></h4><p>见第 02 节。只能缓解：3D 蓝噪声抖动扩展感知色域、输入侧做色域映射保序不保绝对值、产品定位为风格化再现。</p></div></div>
+    <div class="prob"><span class="i">02</span><div><h4>尺度歧义 <span class="pill p-mid">需用户介入</span></h4><p>单图与纯 SfM 都没有绝对尺度，而「一个方块 = 多少米」决定一切。若强行令 1 block = 1 m，10 米高的房子只有 10 层体素，门窗细节全丢。<strong>必须把 voxels_per_meter 作为一等参数暴露</strong>，并提供三种定标途径：用户直接给尺寸、场景已知物体反推、metric depth 模型或 LiDAR。</p></div></div>
+    <div class="prob"><span class="i">03</span><div><h4>光照烘焙污染 <span class="pill p-mid">最易低估</span></h4><p>直接用照片像素色匹配方块，阴影会被烤进方块选择 —— 同一面白墙被切成明暗两种方块，形成难看的色块分界。必须先做内在图像分解取反照率。<strong>这一步的投入产出比在整条管线里最高，是「AI 玩具」和「人类建筑师作品」的分界线。</strong></p></div></div>
+    <div class="prob"><span class="i">04</span><div><h4>语义→方块的知识缺口 <span class="pill p-mid">核心数据资产</span></h4><p>「这是砖」→ 该用 bricks 还是 red_nether_bricks 还是 granite？这是一张需要人工精修的领域知识表（约 30 类 × 每类 5–30 个候选块），没有模型能凭空替代。应独立立项、版本化、支持按风格切换多套映射表 —— 这是<strong>用户可感知价值最高而技术成本最低</strong>的功能点。</p></div></div>
+    <div class="prob"><span class="i">05</span><div><h4>LLM 在长程 3D 坐标上一致性差 <span class="pill p-mid">改走 DSL</span></h4><p>直接让 LLM 输出体素坐标，超过几百块后会出现对称性破缺、坐标漂移、结构不闭合。先行工作 T2BM 引入「层间表示 + 修复」正是在打这个补丁。<strong>结论：语言模态不应走「LLM 直吐体素」，应走「LLM 输出建造程序」</strong> —— 程序天然保证对称、重复、参数化，且可读可编辑可重跑。</p></div></div>
+  </div>
+</section>
+
+<section id="modes">
+  <p class="eyebrow">06 — 输入模态</p>
+  <h2>八条管线，与一个反直觉的优先级</h2>
+  <p class="prose">最该先做的不是传播性最强的「照片 → MC」，而是「现成 3D 资产 → MC」。</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th>模态</th><th>质量</th><th>风险</th><th>阶段</th><th>关键技术与要点</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="name">D1 · 现成 3D 资产<small>OBJ / glTF + 贴图</small></td>
+        <td class="stars">★★★★★</td><td><span class="pill p-low">低</span></td><td><span class="pill p-mvp">MVP 首选</span></td>
+        <td>几何、外观、语义三项全部已知，L1/L2 噪声为零 —— 能让 L3 在干净条件下独立调优，并从 Objaverse 批量构造带真值的回归测试集。<strong>跳过这步直接做照片，等于在噪声输入上调试未验证的核心算法。</strong></td>
+      </tr>
+      <tr>
+        <td class="name">A · 点云 + 全景全彩图</td>
+        <td class="stars">★★★★<b>★</b></td><td><span class="pill p-mid">中 · 配准</span></td><td>v1</td>
+        <td>Poisson + 广义缠绕数<strong>实体</strong>体素化（比表面体素化稳健）；逐面投影烘焙用<strong>加权中位数</strong>而非平均，自动排除高光、行人、玻璃反射。全景须先投影到 cubemap / tangent patches 再送 2D 模型，否则 ERP 极区畸变会显著拉低精度。MVP 建议只支持同源采集设备。</td>
+      </tr>
+      <tr>
+        <td class="name">C1 · 多视角照片 / 视频</td>
+        <td class="stars">★★★★<b>★</b></td><td><span class="pill p-mid">中</span></td><td>v1</td>
+        <td>VGGT 出位姿（前馈秒级、无需内参，解决 COLMAP 在弱纹理少视角下失败）→ 3DGS 精化外观 → 2DGS / SuGaR 提表面 → 体素化。COLMAP 作稳健兜底。</td>
+      </tr>
+      <tr>
+        <td class="name">C2 · 单张照片</td>
+        <td class="stars">★★★<b>★★</b></td><td><span class="pill p-mid">中</span></td><td>v1</td>
+        <td><strong>可能是全项目质量／成本比最高的一条路径：</strong>TRELLIS 系的内部表示本身就是稀疏体素（SLAT / O-Voxel），可直接在其体素结构上做 L3，跳过 mesh↔voxel 往返，省掉两次量化误差。局限须向用户明示：背面是幻觉、无绝对尺度。</td>
+      </tr>
+      <tr>
+        <td class="name">B · 自然语言</td>
+        <td class="stars">★★★<b>★★</b></td><td><span class="pill p-high">中高</span></td><td>v1</td>
+        <td>LLM 输出建造 DSL（几何体 / 建筑构件 / 变换 / 布尔 / 材质刷 / 约束），配 Verifier 闭环：几何闭合、门可通行、采光比、物理支撑、预算、CLIP 语义符合度。失败时回灌<strong>结构化错误</strong>而非自然语言抱怨，通常 2–3 轮收敛。</td>
+      </tr>
+      <tr>
+        <td class="name">D3 · CAD / BIM (IFC)</td>
+        <td class="stars">★★★★★</td><td><span class="pill p-low">低</span></td><td>v2</td>
+        <td><strong>映射质量最高的输入模态。</strong>几何精确无重建误差；材质语义天然存在（IfcMaterial）—— 语义是真值而非预测；楼层构件层级可直接映射分层建造。</td>
+      </tr>
+      <tr>
+        <td class="name">D4 · GIS / DEM / OSM</td>
+        <td class="stars">★★★★<b>★</b></td><td><span class="pill p-low">低</span></td><td>v2</td>
+        <td>DEM → 地形高度场；OSM footprint + levels → 体量拉伸；landuse 标签 → 材质类。工程成熟度高、风险低、传播性强，已有 Arnis / WorldPainter 等成熟先例。</td>
+      </tr>
+      <tr>
+        <td class="name">D5 · 手机 LiDAR / RGB-D</td>
+        <td class="stars">★★★★<b>★</b></td><td><span class="pill p-low">低</span></td><td>v1</td>
+        <td>是模态 A 的<strong>最佳采集手段</strong>：直接给米制尺度点云 + 已对齐彩色，免去尺度标定。配套 iOS 采集 App 是降低使用门槛最有效的手段。</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="sub" style="margin-top:14px">另有 D2 手绘三视图（★★☆☆☆，v2）、D6 低分辨率体素超分（★★★☆☆，v2）。<strong>D7 视频 → 动态 4D 建议排除</strong> —— MC 无原生动画体素支持，需命令方块 hack，投入产出比差。</p>
+</section>
+
+<section id="road">
+  <p class="eyebrow">07 — 路线图</p>
+  <h2>四个阶段</h2>
+  <div class="phases">
+    <div class="ph">
+      <div class="hd"><span class="p">Phase 0</span><span class="w">2–3 周</span></div>
+      <h4>地基</h4>
+      <ul>
+        <li>E1 调色板色域实验</li>
+        <li>提取「方块 × 面 → Lab」查找表</li>
+        <li>打通导出链路并在<strong>真实游戏内验证放置</strong></li>
+        <li>搭建渲染验证回路</li>
+      </ul>
+    </div>
+    <div class="ph">
+      <div class="hd"><span class="p">Phase 1</span><span class="w">4–6 周</span></div>
+      <h4>MVP：3D 资产 → MC</h4>
+      <ul>
+        <li>广义缠绕数实体体素化</li>
+        <li>一元项匹配 + 3D 蓝噪声抖动</li>
+        <li>材质映射表 v1（约 20 类）</li>
+        <li>Objaverse 200 对象回归集</li>
+      </ul>
+    </div>
+    <div class="ph">
+      <div class="hd"><span class="p">Phase 2</span><span class="w">4–6 周</span></div>
+      <h4>L3 核心深化</h4>
+      <ul>
+        <li>成对项 + α-expansion</li>
+        <li>方块共现先验</li>
+        <li>亚体素几何拟合</li>
+        <li>物理修复 + 材料预算</li>
+      </ul>
+    </div>
+    <div class="ph">
+      <div class="hd"><span class="p">Phase 3</span><span class="w">各 3–5 周</span></div>
+      <h4>多模态接入 · 可并行</h4>
+      <ul>
+        <li>3A 照片 / 视频</li>
+        <li>3B 点云 + 全景</li>
+        <li>3C 语言 DSL 闭环</li>
+        <li>3D 单图（走 TRELLIS 捷径）</li>
+      </ul>
+    </div>
+  </div>
+  <div class="note">
+    <b>Phase 0 的验收标准必须是「在真实游戏里放置成功」，而不是「文件生成成功」。</b>
+    这条链路不通，后面全部无意义。同样值得写进立项条件的还有：第 1 周完成 E1，用数据而非直觉设定质量承诺；MVP 锁定 3D 资产模态，把 L3 打扎实后再接其他输入。
+  </div>
+  <h3>资源</h3>
+  <p class="prose">核心研发 2–3 人 × 4–6 个月至 v1（1 人主攻 L3，1 人主攻 L1/L2 集成，0.5–1 人工程化），领域知识 0.5 人月持续投入（材质映射表精修，最好有资深 MC 建筑玩家参与），开发期 1–2 张 24 GB 显卡。<strong>MVP 阶段不需要训练算力</strong> —— 全部是推理加经典优化，这大幅降低了立项门槛。</p>
+</section>
+
+<section id="risk">
+  <p class="eyebrow">08 — 风险</p>
+  <h2>风险登记册</h2>
+  <div class="tw">
+  <table>
+    <thead><tr><th>ID</th><th>风险</th><th>概率</th><th>缓解</th></tr></thead>
+    <tbody>
+      <tr><td class="num">R1</td><td class="name">调色板色域不足，高饱和物体效果差</td><td><span class="pill p-high">确定发生</span></td><td>第 1 周 E1 量化；抖动 + 色域映射；产品文案定位为风格化</td></tr>
+      <tr><td class="num">R2</td><td class="name">材质语义分类精度不足</td><td><span class="pill p-mid">中</span></td><td>映射表兜底；允许用户手动改写；在 DMS / MatSeg 上微调</td></tr>
+      <tr><td class="num">R5</td><td class="name">LLM 生成结构不闭合、不对称</td><td><span class="pill p-high">高</span></td><td>走 DSL 路线；Verifier 闭环自修复</td></tr>
+      <tr><td class="num">R9</td><td class="name">MC 版本更新导致方块表失效</td><td><span class="pill p-high">高</span></td><td>方块表按版本号版本化；建立版本迁移映射</td></tr>
+      <tr><td class="num">R3</td><td class="name">点云与全景异源配准失败</td><td><span class="pill p-mid">中</span></td><td>优先支持同源采集；渲染-匹配自动配准 + 手动标点兜底</td></tr>
+      <tr><td class="num">R4</td><td class="name">尺度估计错误导致分辨率荒谬</td><td><span class="pill p-mid">中</span></td><td>voxels_per_meter 显式化 + 三种定标途径 + 生成前预览</td></tr>
+      <tr><td class="num">R6</td><td class="name">MRF 在大规模体素上过慢</td><td><span class="pill p-mid">中</span></td><td>只优化表面体素 + 分块求解 + 一元项 GPU 预计算</td></tr>
+      <tr><td class="num">R7</td><td class="name"><strong>游戏资源版权</strong> — 提取并再分发方块纹理</td><td><span class="pill p-mid">中</span></td><td><strong>不再分发纹理</strong>；仓库只提交派生的 Lab 统计数值；纹理在用户本机从其自有安装提取。附带好处：天然支持自定义资源包</td></tr>
+      <tr><td class="num">R8</td><td class="name">输出在生存模式不可建造</td><td><span class="pill p-mid">中</span></td><td>材料预算项 + 物理修复 pass + 输出材料清单</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="refs">
+  <p class="eyebrow">09 — 文献</p>
+  <h2>时间有限就读这八篇</h2>
+  <p class="prose">完整索引按 16 个主题分类，每条都标注了在管线中的具体落点。这里是覆盖 80% 关键决策的最小集合。</p>
+  <div class="refs">
+    <div class="ref"><span class="n">01</span><div>
+      <p class="t"><a href="https://www.csd.uwo.ca/~yboykov/Papers/pami01.pdf">Fast Approximate Energy Minimization via Graph Cuts</a> · Boykov, Veksler, Zabih · PAMI 2001</p>
+      <p class="why">α-expansion 的原始文献，L3 求解器的核心。度量条件下有 2 倍近似比保证 —— 这是「工程问题而非科研赌注」这个判断的直接依据。</p></div></div>
+    <div class="ref"><span class="n">02</span><div>
+      <p class="t"><a href="https://www.cs.cornell.edu/rdz/Papers/KZ-PAMI04.pdf">What Energy Functions Can Be Minimized via Graph Cuts?</a> · Kolmogorov &amp; Zabih · PAMI 2004</p>
+      <p class="why">判定哪些能量函数可用图割求解。设计成对项 ψ 时的必读约束条件 —— 决定了共现先验能写成什么形式。</p></div></div>
+    <div class="ref"><span class="n">03</span><div>
+      <p class="t"><a href="https://arxiv.org/abs/2412.01506">TRELLIS: Structured 3D Latents</a> · CVPR 2025 Spotlight · 及后继 <a href="https://github.com/microsoft/TRELLIS.2">TRELLIS.2</a></p>
+      <p class="why">本项目最关键的外部依赖。SLAT / O-Voxel 表示本身就是稀疏体素 —— 那条「直接在其体素结构上做 L3、跳过 mesh 往返」的捷径就出自这里。TRELLIS.2 还输出完整 PBR 材质。</p></div></div>
+    <div class="ref"><span class="n">04</span><div>
+      <p class="t"><a href="https://github.com/LucasDower/ObjToSchematic">ObjToSchematic</a> · 开源工程</p>
+      <p class="why">最接近的先行工程实现：网格 → MC 方块，含体素化算法选择与调色板匹配。建议精读其颜色匹配与抖动部分再动手写自己的版本。</p></div></div>
+    <div class="ref"><span class="n">05</span><div>
+      <p class="t"><a href="https://arxiv.org/abs/2405.00666">RGB↔X: Material- and Lighting-aware Diffusion</a> · SIGGRAPH 2024</p>
+      <p class="why">去光照首选，一次输出 albedo / normal / roughness / metallic / irradiance。对应第 05 节的第三个困难 —— 质量分水岭就在这一步。</p></div></div>
+    <div class="ref"><span class="n">06</span><div>
+      <p class="t"><a href="https://igl.ethz.ch/projects/winding-number/">Robust Inside-Outside Segmentation using Generalized Winding Numbers</a> · SIGGRAPH 2013</p>
+      <p class="why">稳健实体体素化的理论基础。对非水密、带噪、自相交的网格与点云仍能正确判内外 —— 而这正是真实重建数据的常态。</p></div></div>
+    <div class="ref"><span class="n">07</span><div>
+      <p class="t"><a href="https://cv.ulichney.com/papers/1993-void-cluster.pdf">The Void-and-Cluster Method for Dither Array Generation</a> · Ulichney · SPIE 1993</p>
+      <p class="why">3D 各向同性蓝噪声抖动的算法来源。对应第 04 节的判断 C —— 为什么不能直接用 Floyd–Steinberg。</p></div></div>
+    <div class="ref"><span class="n">08</span><div>
+      <p class="t"><a href="https://arxiv.org/abs/2406.08751">3D Building Generation in Minecraft via LLMs (T2BM)</a> · IEEE CoG 2024</p>
+      <p class="why">语言模态最直接的先行工作。重点看它的「层间表示 + 修复」机制 —— 那正是「LLM 直吐体素会失败」的实证，支撑改走 DSL 路线。</p></div></div>
+  </div>
+  <p class="sub" style="margin-top:16px">其余主题：Minecraft 格式规范与工程库（Sponge Schematic v3 / Amulet-Core / litemapy）、多视角重建与 SLAM（VGGT / DUSt3R / MASt3R / COLMAP）、辐射场（3DGS / 2DGS / SuGaR / Neuralangelo）、全景深度、开放词表分割、材质识别数据集（DMS / MatSeg / MINC）、稀疏体素骨干、离散扩散、色彩科学、LLM 程序化生成、数据集、评测方法。索引维护约定：<strong>新增条目必须填写「用在哪」，被证伪的方案不删除而是移入「已排除方案」并注明原因，避免团队重复踩坑。</strong></p>
+</section>
+
+<section id="start">
+  <p class="eyebrow">10 — 立即行动</p>
+  <h2>三件现在就能开始的事</h2>
+  <p class="prose">都不依赖任何模型，可以并行启动。</p>
+  <div class="start">
+    <div class="st">
+      <span class="tag">实验 E1</span>
+      <h4>调色板色域量化</h4>
+      <p>提取全部「方块 × 面」的 Lab 平均色，计算 MC 色域在 sRGB 内的最大最近邻距离场，输出「哪些颜色表达不了」的热力图。这个结论会直接改写产品承诺与验收标准，所以必须最先做。</p>
+    </div>
+    <div class="st">
+      <span class="tag">链路验证</span>
+      <h4>打通导出到游戏</h4>
+      <p>手工构造一个体素数组 → 导出 .litematic → 在真实游戏中成功放置。这条链路不通，其余都是空谈。默认导出 .litematic（无大小限制），原版结构方块有 48³ 硬上限。</p>
+    </div>
+    <div class="st">
+      <span class="tag">迭代基建</span>
+      <h4>渲染验证回路</h4>
+      <p>自动把输出用 Chunky 渲染成图，与参考视图比对 LPIPS / DISTS。没有它就无法迭代 —— 而且 GDMC 的研究已表明自动 PCG 指标与人类评价相关性有限，所以人类评分也不能省。</p>
+    </div>
+  </div>
+</section>
+
+</main>
+<footer>技术可行性评估 v0.1 · 2026-08 · 完整文档见仓库 docs/ ：01-feasibility · 02-solutions · 03-references</footer>
+</div>
+
+<script>
+(function(){
+  // theme toggle — cycles through the three states the viewer can be in
+  var r=document.documentElement, b=document.getElementById('tt');
+  function cur(){
+    var s=r.getAttribute('data-theme');
+    if(s) return s;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+  }
+  b.addEventListener('click',function(){
+    var next = cur()==='dark' ? 'light' : 'dark';
+    r.setAttribute('data-theme', next);
+    b.textContent = next==='dark' ? '切换为浅色' : '切换为深色';
+  });
+
+  // scrollspy
+  var links=[].slice.call(document.querySelectorAll('nav a'));
+  var secs=links.map(function(a){return document.querySelector(a.getAttribute('href'));});
+  var io=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(!e.isIntersecting) return;
+      var i=secs.indexOf(e.target);
+      if(i<0) return;
+      links.forEach(function(l){l.classList.remove('on');});
+      links[i].classList.add('on');
+    });
+  },{rootMargin:'-15% 0px -70% 0px',threshold:0});
+  secs.forEach(function(s){ if(s) io.observe(s); });
+})();
+</script>
+</body>
+</html>
